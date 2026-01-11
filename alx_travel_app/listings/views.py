@@ -1,4 +1,3 @@
-
 from django.http import JsonResponse
 from rest_framework import viewsets
 from .models import Listing, Booking, Payment   # Payment added
@@ -7,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import requests
 import uuid
+from .tasks import send_booking_confirmation_email 
 
 
 # Example view to list all listings
@@ -40,6 +40,13 @@ class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
 
+    def perform_create(self, serializer):
+        booking = serializer.save()
+        # Trigger async email task
+        send_booking_confirmation_email.delay(
+            booking.user.email,
+            booking.id
+        )
 
 
 # ----------------------------------------------------
